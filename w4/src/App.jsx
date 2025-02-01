@@ -62,6 +62,47 @@ function ProductList({ products, onEdit, onDelete, onAddProduct }) {
   );
 }
 
+function Pagination({ pagination, onPageChange }) {
+  return (
+    <div className="d-flex justify-content-center">
+      <nav>
+        <ul className="pagination">
+          <li className={`page-item ${!pagination.has_pre ? "disabled" : ""}`}>
+            <button
+              className="page-link"
+              onClick={() => onPageChange(pagination.current_page - 1)}
+            >
+              上一頁
+            </button>
+          </li>
+
+          {Array.from({ length: pagination.total_pages }, (_, i) => (
+            <li
+              key={i + 1}
+              className={`page-item ${
+                pagination.current_page === i + 1 ? "active" : ""
+              }`}
+            >
+              <button className="page-link" onClick={() => onPageChange(i + 1)}>
+                {i + 1}
+              </button>
+            </li>
+          ))}
+
+          <li className={`page-item ${!pagination.has_next ? "disabled" : ""}`}>
+            <button
+              className="page-link"
+              onClick={() => onPageChange(pagination.current_page + 1)}
+            >
+              下一頁
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  );
+}
+
 function App() {
   const [isAuth, setIsAuth] = useState(false);
   const [account, setAccount] = useState({
@@ -84,6 +125,7 @@ function App() {
       imagesUrls: [],
     });
   };
+  const [pagination, setPagination] = useState({});
 
   const checkLogin = async () => {
     try {
@@ -129,7 +171,7 @@ function App() {
       checkLogin().then((isLoggedIn) => {
         if (isLoggedIn) {
           // 成功登入後載入產品列表
-          fetchProducts();
+          fetchProducts(1); // 預設載入第一頁
         }
       });
     }
@@ -259,10 +301,25 @@ function App() {
     if (window.confirm("確定要刪除此產品嗎？")) {
       try {
         await axios.delete(
-          `${API_URL}/v2/api/${API_PATH}/admin/product/${productId}`
+          `${API_URL}/v2/api/${API_PATH}/admin/product/${productId}`,
+          {
+            headers: { Authorization: localStorage.getItem("hexToken") },
+          }
         );
-        setProducts(products.filter((product) => product.id !== productId));
+
         alert("刪除成功");
+
+        // 重新載入當前頁面
+        const newProducts = products.filter(
+          (product) => product.id !== productId
+        );
+
+        if (newProducts.length === 0 && pagination.current_page > 1) {
+          // 若當前頁面產品數為 0，則回到前一頁
+          fetchProducts(pagination.current_page - 1);
+        } else {
+          fetchProducts(pagination.current_page);
+        }
       } catch (err) {
         console.error("刪除產品失敗", err);
         alert("刪除失敗，請稍後再試");
@@ -270,7 +327,7 @@ function App() {
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = 1) => {
     const token = localStorage.getItem("hexToken");
 
     if (!token) {
@@ -280,12 +337,14 @@ function App() {
 
     try {
       const res = await axios.get(
-        `${API_URL}/v2/api/${API_PATH}/admin/products`,
+        `${API_URL}/v2/api/${API_PATH}/admin/products?page=${page}`,
         {
-          headers: { Authorization: token },
+          headers: { Authorization: localStorage.getItem("hexToken") },
         }
       );
-      setProducts(res.data.products || []); // 更新產品列表
+
+      setProducts(res.data.products || []);
+      setPagination(res.data.pagination); // 更新分頁資訊
     } catch (err) {
       console.error("載入產品列表失敗:", err.response?.data || err.message);
       alert("載入產品列表失敗，請稍後再試");
@@ -338,6 +397,10 @@ function App() {
                 onEdit={handleEditProduct} // 編輯按鈕
                 onDelete={handleDeleteProduct} // 刪除按鈕
                 onAddProduct={handleAddProduct} // 新增按鈕
+              />
+              <Pagination
+                pagination={pagination}
+                onPageChange={fetchProducts}
               />
             </div>
           </div>

@@ -1,3 +1,8 @@
+import axios from "axios";
+
+const API_URL = `${import.meta.env.VITE_BASE_URL}`;
+const API_PATH = `${import.meta.env.VITE_API_PATH}`;
+
 function ProductModal({
   product,
   isEditMode,
@@ -6,6 +11,43 @@ function ProductModal({
   onSubmit,
 }) {
   if (!product) return null;
+
+  const handleImageUpload = async (e, type, index = null) => {
+    const file = e.target.files[0]; // 取得選擇的檔案
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file-to-upload", file); // 符合 API 要求的 key
+
+    try {
+      const res = await axios.post(
+        `${API_URL}/v2/api/${API_PATH}/admin/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // 設定表單格式
+          },
+        }
+      );
+
+      const imageUrl = res.data.imageUrl; // API 回傳的圖片網址
+
+      if (type === "main") {
+        // 更新主圖
+        onInputChange({ target: { name: "imageUrl", value: imageUrl } });
+      } else if (type === "sub" && index !== null) {
+        // 更新副圖
+        const updatedImages = [...product.imagesUrls];
+        updatedImages[index] = imageUrl;
+        onInputChange({ target: { name: "imagesUrls", value: updatedImages } });
+      }
+
+      alert("圖片上傳成功！");
+    } catch (err) {
+      console.error("圖片上傳失敗", err);
+      alert("圖片上傳失敗，請稍後再試");
+    }
+  };
 
   return (
     <div
@@ -42,6 +84,11 @@ function ProductModal({
                     placeholder="請輸入主圖連結"
                     value={product.imageUrl}
                     onChange={onInputChange}
+                  />
+                  <input
+                    type="file"
+                    className="form-control mt-2"
+                    onChange={(e) => handleImageUpload(e, "main")}
                   />
                   {product.imageUrl && (
                     <img
@@ -106,6 +153,11 @@ function ProductModal({
                               },
                             });
                           }}
+                        />
+                        <input
+                          type="file"
+                          className="form-control mt-2"
+                          onChange={(e) => handleImageUpload(e, "sub", index)}
                         />
                         {image && (
                           <img
