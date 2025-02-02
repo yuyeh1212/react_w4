@@ -8,10 +8,12 @@ export default function useProducts() {
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({});
   const [modalProduct, setModalProduct] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchProducts = async (page = 1) => {
     const token = localStorage.getItem("hexToken");
     if (!token) return alert("Token 無效，請先登入！");
+    setIsLoading(true); // 請求開始，開啟 loading
     try {
       const res = await axios.get(
         `${API_URL}/v2/api/${API_PATH}/admin/products?page=${page}`,
@@ -22,6 +24,8 @@ export default function useProducts() {
     } catch (err) {
       console.error("載入產品列表失敗:", err);
       alert("載入產品列表失敗，請稍後再試");
+    } finally {
+      setIsLoading(false); // 請求結束，關閉 loading
     }
   };
 

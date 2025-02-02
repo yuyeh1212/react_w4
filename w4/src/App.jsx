@@ -1,5 +1,5 @@
 // src/App.jsx
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import ProductList from "./components/ProductList";
 import Pagination from "./components/Pagination";
 import ProductModal from "./components/ProductModal";
